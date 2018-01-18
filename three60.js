@@ -1,217 +1,248 @@
-function three60() {
-  "use strict";
+class three60 {
+  constructor() {
+    this.debug = true;
+    this.container = null;
+    this.canvas = null;
+    this.canvasContext = null;
+    this.containerName = null;
+    this.fileName = null;
+    this.totalFrames = null;
+    this.framesLoaded = 0;
+    this.frameIndex = 1;
+    this.lastFrameIndex = 1;
+    this.dragging = false;
+    this.lastScreenX = 0;
+    this.inertiaInterval = null;
+    this.direction = null;
+    this.frameSpeed = 0;
+    this.inertiaFrameSpeed = 0;
+    this.timeInertia = 0;
+    this.inertiaDuration = 0;
+    this.imageObjects = [];
+    this.RAFrunning = false;
+    this.imageFrame = false;
+  }
 
-  var self = this;
+  init(container, fileName, totalFrames) {
+    this.container = document.querySelector('#' + container);
+    this.canvas = document.getElementById(container);
+    this.canvasContext = this.canvas.getContext('2d');
+    this.fileName = fileName;
+    this.totalFrames = totalFrames;
+    this.frameIndex = totalFrames;
+    this.containerName = container;
 
-  self.debug              = true;
-  self.container          = null;
-  self.canvas           = null;
-  self.canvasContext    = null;
-  self.containerName      = null;
-  self.fileName           = null;
-  self.totalFrames        = null;
-  self.framesLoaded       = 0;
-  self.frameIndex         = 1;
-  self.lastFrameIndex     = 1;
-  self.dragging           = false;
-  self.lastScreenX        = 0;
-  self.inertiaInterval    = null;
-  self.direction          = null;
-  self.frameSpeed         = 0;
-  self.inertiaFrameSpeed  = 0;
-  self.timeInertia        = 0;
-  self.inertiaDuration    = 0;
-  self.imageObjects       = [];
-  self.RAFrunning         = false;
-  self.imageFrame         = false;
+    Math.easeOutCirc = (b, d, a, c) => a * Math.sqrt(1 - (b = b / c - 1) * b) + d;
 
-  // initialize
-  self.init = function(container, fileName, totalFrames) {
-    self.container = document.querySelector("#" + container);
-    self.canvas = document.getElementById(container);
-    self.canvasContext = self.canvas.getContext("2d");
-    self.fileName = fileName;
-    self.totalFrames = totalFrames;
-    self.frameIndex = totalFrames;
-    self.containerName = container;
-    Math.easeOutCirc = function(b, d, a, c) {
-      return a * Math.sqrt(1 - (b = b / c - 1) * b) + d
-    };
     window.requestAnimFrame = (function() {
       return window.requestAnimationFrame ||
-      window.webkitRequestAnimationFrame ||
-      window.mozRequestAnimationFrame ||
-      window.oRequestAnimationFrame ||
-      window.msRequestAnimationFrame ||
-      function(callback) {
-        window.setTimeout(callback, 1000 / 60);
-      };
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          window.setTimeout(callback, 1000 / 60);
+        };
     })();
 
     // TODO: add loader.
-    self.setCanvasDimension();
-    self.loadFrames();
-  };
+    this.setCanvasDimension();
+    this.loadFrames();
+  }
 
-  self.loadFrames = function() {
-    for (var i = 1; i <= self.totalFrames; i++) {
+  loadFrames() {
+    let self = this;
+
+    for (let i = 1; i <= self.totalFrames; i++) {
       self.imageObjects[i] = new Image();
       self.imageObjects[i].src = self.fileName.replace("{i}", i);
+
       self.imageObjects[i].onload = function() {
         self.framesLoaded++;
+
         if (self.framesLoaded === self.totalFrames) {
           self.canvasContext.drawImage(this, 0, 0);
           self.loadComplete();
         }
       };
     }
-  };
+  }
 
-  self.setCanvasDimension = function() {
-    var frame = new Image();
-    frame.src = self.fileName.replace("{i}", 1);
-    frame.onload = function() {
-      self.canvas.width = frame.width;
-      self.canvas.height = frame.height;
+  setCanvasDimension() {
+    let frame = new Image();
+
+    frame.src = this.fileName.replace('{i}', 1);
+
+    frame.onload = () => {
+      this.canvas.width = frame.width;
+      this.canvas.height = frame.height;
     }
-  };
+  }
 
-  self.loadComplete = function() {
-    var imgFrame;
+  loadComplete() {
+    let imgFrame;
 
     // TODO: remove loader.
-    self.attachHandlers();
-  };
+    this.attachHandlers();
+  }
 
-  self.attachHandlers = function() {
+  attachHandlers() {
     // handlers for mobile
-    if (typeof document.ontouchstart !== "undefined" && typeof document.ontouchmove !== "undefined" && typeof document.ontouchend !== "undefined" && typeof document.ontouchcancel !== "undefined") {
-      self.canvas.addEventListener("touchstart", function(e) {
+    if (typeof document.ontouchstart !== 'undefined' && typeof document.ontouchmove !== 'undefined' && typeof document.ontouchend !== 'undefined' && typeof document.ontouchcancel !== 'undefined') {
+      this.canvas.addEventListener('touchstart', (e) => {
         e.preventDefault();
-        self.down(e.touches[0].pageX);
+        this.down(e.touches[0].pageX);
       });
-      self.canvas.addEventListener("touchmove", function(e) {
+
+      this.canvas.addEventListener('touchmove', (e) => {
         e.preventDefault();
-        self.move(e.touches[0].pageX);
+        this.move(e.touches[0].pageX);
       });
-      self.canvas.addEventListener("touchend", function(e) {
+
+      this.canvas.addEventListener('touchend', (e) => {
         e.preventDefault();
-        self.up();
+        this.up();
       });
-      self.canvas.addEventListener("touchcancel", function(e) {
+
+      this.canvas.addEventListener('touchcancel', (e) => {
         e.preventDefault();
-        self.up();
+        this.up();
       });
     }
 
     // handlers for desktop
-    self.container.addEventListener("mousedown", function(e) {
+    this.container.addEventListener('mousedown', (e) => {
       e.preventDefault();
-      self.down(e.screenX);
+      this.down(e.screenX);
     });
-    self.container.addEventListener("mousemove", function(e) {
+
+    this.container.addEventListener('mousemove', (e) => {
       e.preventDefault();
-      self.move(e.screenX);
+      this.move(e.screenX);
     });
-    self.container.addEventListener("mouseup", function(e) {
+
+    this.container.addEventListener('mouseup', (e) => {
       e.preventDefault();
-      self.up();
+      this.up();
     });
-    self.container.addEventListener("mouseout", function(e) {
+
+    this.container.addEventListener('mouseout', (e) => {
       e.preventDefault();
-      var relatedTarget = ("relatedTarget" in e? e.relatedTarget : e.toElement);
-      if (relatedTarget.id === self.containerName) {
+
+      let relatedTarget = ('relatedTarget' in e ? e.relatedTarget : e.toElement);
+
+      if (relatedTarget.id === this.containerName) {
         return false;
       }
-      self.up();
+
+      this.up();
     });
-  };
+  }
 
-  self.down = function(x) {
-    self.dragging = true;
-    self.lastScreenX = x;
-    self.stopInertia();
-  };
+  down(x) {
+    this.dragging = true;
+    this.lastScreenX = x;
+    this.stopInertia();
+  }
 
-  self.move = function(x) {
-    if (self.dragging) {
-      self.frameSpeed = (parseInt(Math.abs(self.lastScreenX - x) * 0.05) === 0 ? 1 : parseInt(Math.abs(self.lastScreenX - x) * 0.05));
-      self.lastFrameIndex = self.frameIndex;
-      if (x > self.lastScreenX) {
-        self.frameIndex = self.frameIndex - self.frameSpeed;
-        self.direction = "left";
-      } else if (x < self.lastScreenX) {
-        self.direction = "right";
-        self.frameIndex = self.frameIndex + self.frameSpeed;
+  move(x) {
+    if (this.dragging) {
+      this.frameSpeed = (parseInt(Math.abs(this.lastScreenX - x) * 0.05) === 0 ? 1 : parseInt(Math.abs(this.lastScreenX - x) * 0.05));
+      this.lastFrameIndex = this.frameIndex;
+
+      if (x > this.lastScreenX) {
+        this.frameIndex = this.frameIndex - this.frameSpeed;
+        this.direction = 'left';
       }
-      if (self.frameIndex > self.totalFrames) {
-        self.frameIndex = 1;
+      else if (x < this.lastScreenX) {
+        this.direction = 'right';
+        this.frameIndex = this.frameIndex + this.frameSpeed;
       }
-      if (self.frameIndex < 1) {
-        self.frameIndex = self.totalFrames;
+
+      if (this.frameIndex > this.totalFrames) {
+        this.frameIndex = 1;
       }
-      if (self.lastFrameIndex !== self.lastScreenX) {
-        self.updateFrames();
+
+      if (this.frameIndex < 1) {
+        this.frameIndex = this.totalFrames;
       }
-      self.lastScreenX = x;
+
+      if (this.lastFrameIndex !== this.lastScreenX) {
+        this.updateFrames();
+      }
+
+      this.lastScreenX = x;
     }
-  };
+  }
 
-  self.up = function() {
-    self.dragging = false;
-    if (self.frameSpeed > 1) {
-      self.inertia();
+  up() {
+    this.dragging = false;
+
+    if (this.frameSpeed > 1) {
+      this.inertia();
     }
-  };
+  }
 
-  self.inertia = function() {
-    self.inertiaDuration = self.frameSpeed;
-    self.inertiaFrameSpeed = 0;
-    if (!self.RAFrunning) {
-      requestAnimFrame(self.inertiaRAF);
-    }
-    self.RAFrunning = true;
-  };
+  inertia() {
+    this.inertiaDuration = this.frameSpeed;
+    this.inertiaFrameSpeed = 0;
 
-  self.inertiaRAF = function() {
-    self.timeInertia += 0.04;
-    self.frameSpeed = self.inertiaDuration - parseInt(Math.easeOutCirc(self.timeInertia, 0, self.inertiaDuration, self.inertiaDuration));
-    self.inertiaFrameSpeed += self.inertiaDuration - Math.easeOutCirc(self.timeInertia, 0, self.inertiaDuration, self.inertiaDuration);
-    if (self.inertiaFrameSpeed >= 1) {
-      self.lastFrameIndex = self.frameIndex;
-      if (self.direction === "right") {
-        self.frameIndex = self.frameIndex + Math.floor(self.inertiaFrameSpeed);
-      } else {
-        self.frameIndex = self.frameIndex - Math.floor(self.inertiaFrameSpeed);
-      }
-      if (self.frameIndex > self.totalFrames) {
-        self.frameIndex = 1;
-      }
-      if (self.frameIndex < 1) {
-        self.frameIndex = self.totalFrames;
-      }
-      self.inertiaFrameSpeed = 0;
-      self.updateFrames();
+    if (!this.RAFrunning) {
+      requestAnimFrame(this.inertiaRAF);
     }
 
-    if (self.timeInertia > self.inertiaDuration || self.frameSpeed < 1) {
-      self.stopInertia();
-    } else {
-      requestAnimFrame(self.inertiaRAF);
+    this.RAFrunning = true;
+  }
+
+  inertiaRAF() {
+    this.timeInertia += 0.04;
+    this.frameSpeed = this.inertiaDuration - parseInt(Math.easeOutCirc(this.timeInertia, 0, this.inertiaDuration, this.inertiaDuration));
+    this.inertiaFrameSpeed += this.inertiaDuration - Math.easeOutCirc(this.timeInertia, 0, this.inertiaDuration, this.inertiaDuration);
+
+    if (this.inertiaFrameSpeed >= 1) {
+      this.lastFrameIndex = this.frameIndex;
+
+      if (this.direction === 'right') {
+        this.frameIndex = this.frameIndex + Math.floor(this.inertiaFrameSpeed);
+      }
+      else {
+        this.frameIndex = this.frameIndex - Math.floor(this.inertiaFrameSpeed);
+      }
+
+      if (this.frameIndex > this.totalFrames) {
+        this.frameIndex = 1;
+      }
+
+      if (this.frameIndex < 1) {
+        this.frameIndex = this.totalFrames;
+      }
+
+      this.inertiaFrameSpeed = 0;
+      this.updateFrames();
     }
-  };
 
-  self.stopInertia = function() {
-    self.timeInertia = 0;
-    self.inertiaDuration = 0;
-    self.RAFrunning = false;
-  };
+    if (this.timeInertia > this.inertiaDuration || this.frameSpeed < 1) {
+      this.stopInertia();
+    }
+    else {
+      requestAnimFrame(this.inertiaRAF);
+    }
+  }
 
-  self.updateFrames = function() {
+  stopInertia() {
+    this.timeInertia = 0;
+    this.inertiaDuration = 0;
+    this.RAFrunning = false;
+  }
+
+  updateFrames() {
+    let self = this;
+
     self.imageFrame = new Image();
     self.imageFrame.src = self.fileName.replace("{i}", self.frameIndex);
+
     self.imageFrame.onload = function() {
       self.canvasContext.drawImage(this, 0, 0);
     }
-  };
+  }
 }
